@@ -381,6 +381,7 @@ class HiddenMarkovModel:
                 for xt in range(self.D):
                     self.O[curr][xt] = O_num[curr][xt] / O_den[curr]
 
+
     def generate_emission(self, obs_map_r, syllable_map, M):
         '''
         Generates an emission of length M, assuming that the starting state
@@ -415,6 +416,7 @@ class HiddenMarkovModel:
             next_obs -= 1
             emission.append(next_obs)
             word_index = obs_map_r[next_obs]
+            print(word_index)
             last_syllable = syllable_map[word_index]
             syllable_counter += last_syllable
 

@@ -8,6 +8,7 @@
 
 import re
 import numpy as np
+import string
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 from matplotlib import animation
@@ -98,6 +99,7 @@ def parse_syllables(text):
         syllable_count = int(syllable_count)
         syllable_map[word] = syllable_count
         
+    return syllable_map
 
 def parse_observations(text):
     # Convert text to dataset.
@@ -111,7 +113,8 @@ def parse_observations(text):
         obs_elem = []
         
         for word in line:
-            word = re.sub(r'[^\w]', '', word).lower()
+            word = re.sub("\d+", "", word)
+            word = re.sub(r'[^-\w]', '', word).lower()
             if word not in obs_map:
                 # Add unique words to the observations map.
                 obs_map[word] = obs_counter
@@ -133,12 +136,12 @@ def obs_map_reverser(obs_map):
 
     return obs_map_r
 
-def sample_sentence(hmm, obs_map, syllable_map, n_words=100):
+def sample_sentence(hmm, obs_map, syllable_map, n_syllables):
     # Get reverse map.
     obs_map_r = obs_map_reverser(obs_map)
 
     # Sample and convert sentence.
-    emission, states = hmm.generate_emission(n_words, obs_map_r, syllable_map)
+    emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables)
     sentence = [obs_map_r[i] for i in emission]
 
     return ' '.join(sentence).capitalize() + '...'

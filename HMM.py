@@ -7,6 +7,7 @@
 ########################################
 
 import random
+import numpy as np
 
 class HiddenMarkovModel:
     '''
@@ -437,7 +438,11 @@ class HiddenMarkovModel:
                 emission = emission[:-1]
                 possible_obs = [i for i in range(self.D) if syllable_map[obs_map_r[i]] == syllable_to_find]
                 emission_probs = np.array(self.O[states[-1]])
-                new_emission_probs = np.linalg.norm(np.array([emission_probs[j] for j in possible_obs]))
+                emission_probs = [emission_probs[j] for j in possible_obs]
+
+                new_emission_probs = np.array([float(emission_probs[j])/sum(emission_probs) for j in range(len(emission_probs))])
+
+            
                 new_emission = np.random.choice(possible_obs, p = new_emission_probs)
                 emission.append(new_emission)
 

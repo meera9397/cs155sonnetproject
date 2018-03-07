@@ -148,8 +148,8 @@ def sample_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
 
     sonnet_string = ""
     for line in range(n_lines):
-        sonnet = [obs_map_r[i] for i in emission]
-        sonnet_string += (' '.join(sonnet).capitalize()) + '\n'
+        sonnet = [obs_map_r[i] for i in emission[line]]
+        sonnet_string += str((' '.join(sonnet).capitalize()) + '\n')
        
     
     return sonnet_string

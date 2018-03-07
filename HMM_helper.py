@@ -6,6 +6,7 @@
 # Description:  Set 6 HMM helper
 ########################################
 
+import random
 import re
 import numpy as np
 import string
@@ -102,36 +103,120 @@ def parse_syllables(text):
     return syllable_map
 
 def parse_backwards_observations(text):
-    # Convert text to dataset.
-    lines = [line.split() for line in text.split('\n\n') if line.split()]
-
+    # Store indices for unique observations, store observations, and map word to its index
     obs_counter = 0
     obs = []
     obs_map = {}
 
+    # Convert text to dataset.
+    lines = [line.split() for line in text.split('\n\n') if line.split()]
+        
+    # For each line in poem:
     for line in lines:
+        # Learn line in reverse order to later use for rhyming
         line = line[::-1]
         obs_elem = []
-        
+
+        # For each word in line:
         for word in line:
             word = re.sub("\d+", "", word)
             if (word == ""):
                 continue
             word = re.sub(r'[^-\w\']', '', word).lower()
-                
+
             if word not in obs_map:
                 # Add unique words to the observations map.
                 obs_map[word] = obs_counter
                 obs_counter += 1
-            
+
             # Add the encoded word.
             obs_elem.append(obs_map[word])
-        
-        # Add the encoded sequence.
-        obs.append(obs_elem)
 
-    return obs, obs_map
+        # Add the encoded sequence
+        obs.append(obs_elem)
     
+    # Return observation list and observation word to index map
+    return obs, obs_map
+
+def add_rhyme_pair(word_to_set, sets, p1, p2):
+    i = -1
+    
+    # Remove punctuation
+    p1 = re.sub("\s\.$", "\s", p1)
+    p2 = re.sub("\s\.$", "\s", p2)
+    
+    # If either word found in set, get index of set
+    if (p1 in word_to_set):
+        i = word_to_set[p1]
+    elif (p2 in word_to_set):
+        i = word_to_set[p2]
+    # Otherwise create new empty set in sets and get its new index
+    else:
+        i = len(sets)
+        sets.append([])
+    
+    # If word1 not in dictionary, add it to dictionary and corresponding set
+    if (p1 not in word_to_set):
+        word_to_set[p1] = i
+        sets[i].append(p1)
+    # If word2 not in dictionary, add it to dictionary and corresponding set
+    if (p2 not in word_to_set):
+        word_to_set[p2] = i
+        sets[i].append(p2)
+
+    return word_to_set, sets
+
+def generate_rhyme_seq(sets):
+    seq = []
+    seq_count = 0
+    indices = range(len(sets))
+    
+    # Generate 3 stanzas (abab, cdcd, or efef) of rhyming words
+    for _ in range(3):
+        # Get indices for sets a and b
+        rhyme_set1 = sets[np.random.choice(indices)]
+        rhyme_set2 = sets[np.random.choice(indices)]
+        
+        # Add a, b, a, b
+        seq.append(np.random.choice(rhyme_set1))
+        seq.append(np.random.choice(rhyme_set2))
+        seq.append(np.random.choice(rhyme_set1))
+        seq.append(np.random.choice(rhyme_set2))
+    
+    # Generate gg rhyming words
+    rhyme_set = sets[np.random.choice(indices)]
+    seq.append(np.random.choice(rhyme_set))
+    seq.append(np.random.choice(rhyme_set))
+    
+    return seq
+
+def make_rhyme(text):
+    # word_to_set is a dict that takes word, returns index of set it appears in
+    word_to_set = {}
+    # sets holds sets (list of unique items) of words that rhyme with one another
+    sets = []
+    
+    # TODO: Split poem by stanzas, remove numbers
+    
+    # Save rhymes abab cdcd efef from this poem
+    for i in range(1, 13, 4):
+        # Get and add paired rhyme (e.g. a1, a2; and a2, a1)
+        a1 = lines[i][-1]
+        a2 = lines[i+2][-1]
+        b1 = lines[i+1][-1]
+        b2 = lines[i+3][-1]
+        word_to_set, sets = add_rhyme_pair(word_to_set, sets, a1, a2)
+        word_to_set, sets = add_rhyme_pair(word_to_set, sets, b1, b2)
+
+    # Save rhymes gg
+    p1 = lines[13][-1]
+    p2 = lines[14][-1]
+    word_to_set, sets = add_rhyme_pair(word_to_set, sets, p1, p2)
+    
+    rhyme_seq = generate_rhyme_seq(sets)
+    
+    return rhyme_seq
+
 def parse_observations(text):
     # Convert text to dataset.
     lines = [line.split() for line in text.split('\n\n') if line.split()]

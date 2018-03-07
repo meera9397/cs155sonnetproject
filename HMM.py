@@ -391,17 +391,20 @@ class HiddenMarkovModel:
         for line in range(n_lines):
             
             states = []
+            # get the index for the current rhyme
             emission_hash = obs_map[rhymes[line]]
+            # add it to the emission list for the current line
             emission = [emission_hash]
-            
+            # find the probability of each state to emit the rhyme
             state_probs = [self.O[state][emission_hash] for state in possible_states]
-
+            # pick the state with the highest probability as the initial state
             init_state = state_probs.index(max(state_probs))
             states.append(init_state)
+
             syllable_counter = syllable_map[rhymes[line]]
             last_syllable = syllable_counter
 
-
+            # make sure that the line has 10 syllables
             while syllable_counter < n_syllables:
 
                 state_probs = np.array(self.A[states[-1]])
@@ -416,6 +419,8 @@ class HiddenMarkovModel:
                 last_syllable = syllable_map[word_index]
                 syllable_counter += last_syllable
 
+            # if the line has more than 10 syllables, strip off the last word and rechoose another 
+            # so that the line has exactly 10 syllables
             if syllable_counter > n_syllables:
 
                 syllable_to_find = n_syllables - (syllable_counter - last_syllable)

@@ -114,7 +114,9 @@ def parse_observations(text):
         
         for word in line:
             word = re.sub("\d+", "", word)
-            word = re.sub(r'[^-\w]', '', word).lower()
+            if (word == ""):
+                continue
+            word = re.sub(r'[^-\w\']', '', word).lower()
             if word not in obs_map:
                 # Add unique words to the observations map.
                 obs_map[word] = obs_counter
@@ -136,16 +138,20 @@ def obs_map_reverser(obs_map):
 
     return obs_map_r
 
-def sample_sentence(hmm, obs_map, syllable_map, n_syllables):
+def sample_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
     # Get reverse map.
     obs_map_r = obs_map_reverser(obs_map)
 
     # Sample and convert sentence.
-    emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables)
-    sentence = [obs_map_r[i] for i in emission]
+    emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
 
-    return ' '.join(sentence).capitalize() + '...'
-
+    sonnet_string = ""
+    for line in range(n_lines):
+        sonnet = [obs_map_r[i] for i in emission]
+        sonnet_string += (' '.join(sonnet).capitalize()) + '\n'
+       
+    
+    return sonnet_string
 
 ####################
 # HMM VISUALIZATION FUNCTIONS
@@ -243,6 +249,7 @@ def animate_emission(hmm, obs_map, M=8, height=12, width=12, delay=1):
         arrows.append(row)
 
     emission, states = hmm.generate_emission(M)
+    emission = [item for sublist in emission for item in sublist]
 
     def animate(i):
         if i >= delay:

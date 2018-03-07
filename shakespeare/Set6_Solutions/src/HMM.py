@@ -382,9 +382,9 @@ class HiddenMarkovModel:
                     self.O[curr][xt] = O_num[curr][xt] / O_den[curr]
 
 
-    def generate_emission(self, obs_map_r, syllable_map, M):
+    def generate_emission(self, obs_map_r, syllable_map, n_syllables, n_lines):
         '''
-        Generates an emission of length M, assuming that the starting state
+        Generates an emission of a sonnet, assuming that the starting state
         is chosen uniformly at random. 
 
         Arguments:
@@ -396,52 +396,55 @@ class HiddenMarkovModel:
             states:     The randomly generated states as a list.
         '''
 
-        emission = []
-        state = random.choice(range(self.L))
+        emission_list = []
         states = []
-        syllable_counter = 0
+        for line in range(n_lines):
+            emission = []
+            state = random.choice(range(self.L))
+            syllable_counter = 0
 
-        while syllable_counter < M:
-            # Append state.
-            states.append(state)
+            while syllable_counter < n_syllables:
+                # Append state.
+                states.append(state)
 
-            # Sample next observation.
-            rand_var = random.uniform(0, 1)
-            next_obs = 0
+                # Sample next observation.
+                rand_var = random.uniform(0, 1)
+                next_obs = 0
 
-            while rand_var > 0:
-                rand_var -= self.O[state][next_obs]
-                next_obs += 1
+                while rand_var > 0:
+                    rand_var -= self.O[state][next_obs]
+                    next_obs += 1
 
-            next_obs -= 1
-            emission.append(next_obs)
-            word_index = obs_map_r[next_obs]
-            print(word_index)
-            last_syllable = syllable_map[word_index]
-            syllable_counter += last_syllable
+                next_obs -= 1
+                emission.append(next_obs)
+                word_index = obs_map_r[next_obs]
+                last_syllable = syllable_map[word_index]
+                syllable_counter += last_syllable
 
-            # Sample next state.
-            rand_var = random.uniform(0, 1)
-            next_state = 0
+                # Sample next state.
+                rand_var = random.uniform(0, 1)
+                next_state = 0
 
-            while rand_var > 0:
-                rand_var -= self.A[state][next_state]
-                next_state += 1
+                while rand_var > 0:
+                    rand_var -= self.A[state][next_state]
+                    next_state += 1
 
-            next_state -= 1
-            state = next_state
+                next_state -= 1
+                state = next_state
 
-        if (syllable_counter > M):
-            syllable_to_find = M - (syllable_counter - last_syllable)
-            emission = emission[:-1]
-            possible_obs = [i for i in range(self.D) if syllable_map[obs_map_r[i]]== syllable_to_find]
-            emission_probs = np.array(self.O[states[-1]])
-            new_emission_probs = np.linalg.norm(np.array([emission_probs[j] for j in possible_obs]))
-            new_emission = np.random.choice(possible_obs, p = new_emission_probs)
-            emission.append(new_emission)
+            if (syllable_counter > n_syllables):
+                syllable_to_find = n_syllables - (syllable_counter - last_syllable)
+                emission = emission[:-1]
+                possible_obs = [i for i in range(self.D) if syllable_map[obs_map_r[i]] == syllable_to_find]
+                emission_probs = np.array(self.O[states[-1]])
+                new_emission_probs = np.linalg.norm(np.array([emission_probs[j] for j in possible_obs]))
+                new_emission = np.random.choice(possible_obs, p = new_emission_probs)
+                emission.append(new_emission)
+
+            emission_list.append(emission)
 
 
-        return emission, states
+        return emission_list, states
 
 
     def probability_alphas(self, x):

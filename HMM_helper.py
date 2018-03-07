@@ -171,24 +171,24 @@ def obs_map_reverser(obs_map):
     return obs_map_r
 
 
-def sample_backwards_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
+def sample_backwards_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines, rhymes):
     # Get reverse map.
     obs_map_r = obs_map_reverser(obs_map)
 
     # Sample and convert sentence.
-    emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
+    emission, states = hmm.rhyming_emission(obs_map, obs_map_r, syllable_map, n_syllables, n_lines, rhymes)
     
     # punctuation list
     punctuation_list = [',','.',':','?']
-    punctuation_probs = np.array[0.6, 0.1, 0.2, 0,1]
+    punctuation_probs = [0.6, 0.1, 0.2, 0.1]
 
     sonnet_string = ""
     for line in range(n_lines):
-        line = line[::-1]
-        punctuation = np.random.choice(punctuation_list, punctuation_probs)
-        if (line == len(n_lines - 1):
+        punctuation = np.random.choice(punctuation_list, p = punctuation_probs)
+        if (line == n_lines - 1):
             punctuation = '.'
         sonnet = [obs_map_r[i] for i in emission[line]]
+        sonnet = sonnet[::-1]
         sonnet_string += str((' '.join(sonnet).capitalize()) + punctuation + '\n')
     
     return sonnet_string
@@ -203,13 +203,13 @@ def sample_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
             
     # punctuation list
     punctuation_list = [',','.',':','?']
-    punctuation_probs = np.array[0.6, 0.1, 0.2, 0,1]
+    punctuation_probs = [0.6, 0.1, 0.2, 0.1]
 
     sonnet_string = ""
     for line in range(n_lines):
-        punctuation = np.random.choice(punctuation_list, punctuation_probs)
+        punctuation = np.random.choice(punctuation_list, p = punctuation_probs)
         sonnet = [obs_map_r[i] for i in emission[line]]
-        if (line == len(n_lines - 1):
+        if (line == n_lines - 1):
             punctuation = '.'
         sonnet_string += str((' '.join(sonnet).capitalize()) + punctuation + '\n')
        

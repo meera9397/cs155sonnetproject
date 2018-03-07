@@ -383,6 +383,56 @@ class HiddenMarkovModel:
                     self.O[curr][xt] = O_num[curr][xt] / O_den[curr]
 
 
+    def rhyming_emission(self, obs_map, obs_map_r, syllable_map, n_syllables, n_lines, rhymes):
+        emission_list = []
+        possible_states = [j for j in range(self.L)]
+        all_obs = [i for i in range(self.D)]
+
+        for line in range(n_lines):
+            
+            states = []
+            emission_hash = obs_map[rhymes[line]]
+            emission = [emission_hash]
+            
+            state_probs = [self.O[state][emission_hash] for state in possible_states]
+
+            init_state = state_probs.index(max(state_probs))
+            states.append(init_state)
+            syllable_counter = syllable_map[rhymes[line]]
+            last_syllable = syllable_counter
+
+
+            while syllable_counter < n_syllables:
+
+                state_probs = np.array(self.A[states[-1]])
+                next_state =  np.random.choice(possible_states, p = state_probs)
+                states.append(next_state)
+
+                emission_probs = np.array(self.O[states[-1]])
+                new_emission = np.random.choice(all_obs, p = emission_probs)
+                emission.append(new_emission)
+
+                word_index = obs_map_r[new_emission]
+                last_syllable = syllable_map[word_index]
+                syllable_counter += last_syllable
+
+            if syllable_counter > n_syllables:
+
+                syllable_to_find = n_syllables - (syllable_counter - last_syllable)
+                emission = emission[:-1]
+                possible_obs = [i for i in range(self.D) if syllable_map[obs_map_r[i]] == syllable_to_find]
+                emission_probs = np.array(self.O[states[-1]])
+                emission_probs = [emission_probs[j] for j in possible_obs]
+
+                new_emission_probs = np.array([float(emission_probs[j])/sum(emission_probs) for j in range(len(emission_probs))])
+                new_emission = np.random.choice(possible_obs, p = new_emission_probs)
+                emission.append(new_emission)
+
+            emission_list.append(emission)
+
+        return emission_list, states
+
+
     def generate_emission(self, obs_map_r, syllable_map, n_syllables, n_lines):
         '''
         Generates an emission of a sonnet, assuming that the starting state
@@ -399,6 +449,7 @@ class HiddenMarkovModel:
 
         emission_list = []
         states = []
+
         for line in range(n_lines):
             emission = []
             state = random.choice(range(self.L))

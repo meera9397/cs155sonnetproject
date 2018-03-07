@@ -117,6 +117,7 @@ def parse_observations(text):
             if (word == ""):
                 continue
             word = re.sub(r'[^-\w\']', '', word).lower()
+                
             if word not in obs_map:
                 # Add unique words to the observations map.
                 obs_map[word] = obs_counter

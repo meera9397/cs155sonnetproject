@@ -101,6 +101,37 @@ def parse_syllables(text):
         
     return syllable_map
 
+def parse_backwards_observations(text):
+    # Convert text to dataset.
+    lines = [line.split() for line in text.split('\n\n') if line.split()]
+
+    obs_counter = 0
+    obs = []
+    obs_map = {}
+
+    for line in lines:
+        line = line[::-1]
+        obs_elem = []
+        
+        for word in line:
+            word = re.sub("\d+", "", word)
+            if (word == ""):
+                continue
+            word = re.sub(r'[^-\w\']', '', word).lower()
+                
+            if word not in obs_map:
+                # Add unique words to the observations map.
+                obs_map[word] = obs_counter
+                obs_counter += 1
+            
+            # Add the encoded word.
+            obs_elem.append(obs_map[word])
+        
+        # Add the encoded sequence.
+        obs.append(obs_elem)
+
+    return obs, obs_map
+    
 def parse_observations(text):
     # Convert text to dataset.
     lines = [line.split() for line in text.split('\n\n') if line.split()]
@@ -139,17 +170,48 @@ def obs_map_reverser(obs_map):
 
     return obs_map_r
 
+
+def sample_backwards_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
+    # Get reverse map.
+    obs_map_r = obs_map_reverser(obs_map)
+
+    # Sample and convert sentence.
+    emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
+    
+    # punctuation list
+    punctuation_list = [',','.',':','?']
+    punctuation_probs = np.array[0.6, 0.1, 0.2, 0,1]
+
+    sonnet_string = ""
+    for line in range(n_lines):
+        line = line[::-1]
+        punctuation = np.random.choice(punctuation_list, punctuation_probs)
+        if (line == len(n_lines - 1):
+            punctuation = '.'
+        sonnet = [obs_map_r[i] for i in emission[line]]
+        sonnet_string += str((' '.join(sonnet).capitalize()) + punctuation + '\n')
+    
+    return sonnet_string
+    
+    
 def sample_sonnet(hmm, obs_map, syllable_map, n_syllables, n_lines):
     # Get reverse map.
     obs_map_r = obs_map_reverser(obs_map)
 
     # Sample and convert sentence.
     emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
+            
+    # punctuation list
+    punctuation_list = [',','.',':','?']
+    punctuation_probs = np.array[0.6, 0.1, 0.2, 0,1]
 
     sonnet_string = ""
     for line in range(n_lines):
+        punctuation = np.random.choice(punctuation_list, punctuation_probs)
         sonnet = [obs_map_r[i] for i in emission[line]]
-        sonnet_string += str((' '.join(sonnet).capitalize()) + '\n')
+        if (line == len(n_lines - 1):
+            punctuation = '.'
+        sonnet_string += str((' '.join(sonnet).capitalize()) + punctuation + '\n')
        
     
     return sonnet_string

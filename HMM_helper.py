@@ -6,7 +6,6 @@
 # Description:  Set 6 HMM helper
 ########################################
 
-import random
 import re
 import numpy as np
 import string
@@ -64,21 +63,19 @@ def states_to_wordclouds(hmm, obs_map, syllable_map, n_syllables, n_lines,show=T
     emission, states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
     emission = [item for sublist in emission for item in sublist] # flatten list
     
-    for i in range(152):
-        curr_emission, curr_states = hmm.generate_emission(obs_map_r, syllable_map, n_syllables, n_lines)
-        curr_emission = [item for sublist in curr_emission for item in sublist]
-        emission += curr_emission
-        states += curr_states
-
     # For each state, get a list of observations that have been emitted
     # from that state.
     obs_count = []
+    n_states_copy = n_states
     for i in range(n_states):
         obs_lst = np.array(emission)[np.where(np.array(states) == i)[0]]
+        if (len(obs_lst) == 0):
+            n_states_copy -= 1
+            continue
         obs_count.append(obs_lst)
 
     # For each state, convert it into a wordcloud.
-    for i in range(n_states):
+    for i in range(n_states_copy):
         obs_lst = obs_count[i]
         sentence = [obs_map_r[j] for j in obs_lst]
         sentence_str = ' '.join(sentence)
@@ -93,6 +90,7 @@ def states_to_wordclouds(hmm, obs_map, syllable_map, n_syllables, n_lines,show=T
 ####################
 
 def parse_syllables(text):
+    ''' Creates a dictionary of [key = word, value = # syllables] '''
     syllable_map = {}
     lines = text.split('\n')
     
@@ -110,141 +108,38 @@ def parse_syllables(text):
     return syllable_map
 
 def parse_backwards_observations(text):
-    # Store indices for unique observations, store observations, and map word to its index
+    ''' Parses the text for backwards HMM generation '''
+    
+    # Convert text to dataset.
+    lines = [line.split() for line in text.split('\n\n') if line.split()]
+
     obs_counter = 0
     obs = []
     obs_map = {}
 
-    # Convert text to dataset.
-    lines = [line.split() for line in text.split('\n\n') if line.split()]
-        
-    # For each line in poem:
     for line in lines:
-        # Learn line in reverse order to later use for rhyming
         line = line[::-1]
         obs_elem = []
-
-        # For each word in line:
+        
         for word in line:
             word = re.sub("\d+", "", word)
             if (word == ""):
                 continue
             word = re.sub(r'[^-\w\']', '', word).lower()
-
+                
             if word not in obs_map:
                 # Add unique words to the observations map.
                 obs_map[word] = obs_counter
                 obs_counter += 1
-
+            
             # Add the encoded word.
             obs_elem.append(obs_map[word])
-
-        # Add the encoded sequence
-        obs.append(obs_elem)
-    
-    # Return observation list and observation word to index map
-    return obs, obs_map
-
-def add_rhyme_pair(word_to_set, sets, p1, p2):
-    i = -1
-    
-    # Remove punctuation
-    p1 = re.sub("\s\.$", "\s", p1)
-    p2 = re.sub("\s\.$", "\s", p2)
-    
-    # If either word found in set, get index of set
-    if (p1 in word_to_set):
-        i = word_to_set[p1]
-    elif (p2 in word_to_set):
-        i = word_to_set[p2]
-    # Otherwise create new empty set in sets and get its new index
-    else:
-        i = len(sets)
-        sets.append([])
-    
-    # If word1 not in dictionary, add it to dictionary and corresponding set
-    if (p1 not in word_to_set):
-        word_to_set[p1] = i
-        sets[i].append(p1)
-    # If word2 not in dictionary, add it to dictionary and corresponding set
-    if (p2 not in word_to_set):
-        word_to_set[p2] = i
-        sets[i].append(p2)
-
-    return word_to_set, sets
-
-def generate_rhyme_seq(sets):
-    seq = []
-    seq_count = 0
-    indices = range(len(sets))
-    
-    # Generate 3 stanzas (abab, cdcd, or efef) of rhyming words
-    for _ in range(3):
-        # Get indices for sets a and b
-        rhyme_set1 = sets[np.random.choice(indices)]
-        rhyme_set2 = sets[np.random.choice(indices)]
         
-        # Add a, b, a, b
-        # Pick a1 and b1, and keep picking rhyming set until they're different words
-        a1 = np.random.choice(rhyme_set1)
-        b1 = np.random.choice(rhyme_set2)
-        a2 = a1
-        b2 = b1
-        while (a1 == a2):
-            a2 = np.random.choice(rhyme_set1)
-        while (b1 == b2):
-            b2 = np.random.choice(rhyme_set2)
-        seq.extend((a1, b1, a2, b2))
-    
-    # Generate gg rhyming words
-    rhyme_set = sets[np.random.choice(indices)]
-    g1 = np.random.choice(rhyme_set)
-    g2 = g1
-    while (g1 == g2):
-        g2 = np.random.choice(rhyme_set)
-    seq.extend((g1, g2))
-    
-    # Return 14 word sequence
-    return seq
+        # Add the encoded sequence.
+        obs.append(obs_elem)
 
-def make_rhyme(text):
-    # word_to_set is a dict that takes word, returns index of set it appears in
-    word_to_set = {}
-    # sets holds sets (list of unique items) of words that rhyme with one another
-    sets = []
+    return obs, obs_map
     
-    # Split line by poems
-    poems = re.compile(r"\n{2,}").split(text)
-    
-    # For poem, split lines and save rhymes
-    for poem in poems:
-        lines = poem.split('\n')
-
-        # Convert lines to lists of words
-        lines = [line.split() for line in lines]
-        # Strip punctuation and capitalization
-        lines = [[word.strip(",.:;?!").lower() for word in line] for line in lines]
-
-        # Save rhymes abab cdcd efef from this poem
-        # Note first line (i=0) is the number of the sonnet so we skip it
-        for i in range(1, 13, 4):
-            # Get and add paired rhyme (e.g. a1, a2; and a2, a1)
-            a1 = lines[i][-1]
-            a2 = lines[i+2][-1]
-            b1 = lines[i+1][-1]
-            b2 = lines[i+3][-1]
-            word_to_set, sets = add_rhyme_pair(word_to_set, sets, a1, a2)
-            word_to_set, sets = add_rhyme_pair(word_to_set, sets, b1, b2)
-
-        # Save rhymes gg
-        p1 = lines[13][-1]
-        p2 = lines[14][-1]
-        word_to_set, sets = add_rhyme_pair(word_to_set, sets, p1, p2)
-    
-    rhyme_seq = generate_rhyme_seq(sets)
-    
-    return rhyme_seq
-
 def parse_observations(text):
     # Convert text to dataset.
     lines = [line.split() for line in text.split('\n\n') if line.split()]
@@ -350,108 +245,4 @@ def visualize_sparsities(hmm, O_max_cols=50, O_vmax=0.1):
     plt.show()
 
 
-####################
-# HMM ANIMATION FUNCTIONS
-####################
 
-def animate_emission(hmm, obs_map, M=8, height=12, width=12, delay=1):
-    # Parameters.
-    lim = 1200
-    text_x_offset = 40
-    text_y_offset = 80
-    x_offset = 580
-    y_offset = 520
-    R = 420
-    r = 100
-    arrow_size = 20
-    arrow_p1 = 0.03
-    arrow_p2 = 0.02
-    arrow_p3 = 0.06
-    
-    # Initialize.
-    n_states = len(hmm.A)
-    obs_map_r = obs_map_reverser(obs_map)
-    wordclouds = states_to_wordclouds(hmm, obs_map, max_words=20, show=False)
-
-    # Initialize plot.    
-    fig, ax = plt.subplots()
-    fig.set_figheight(height)
-    fig.set_figwidth(width)
-    ax.grid('off')
-    plt.axis('off')
-    ax.set_xlim([0, lim])
-    ax.set_ylim([0, lim])
-
-    # Plot each wordcloud.
-    for i, wordcloud in enumerate(wordclouds):
-        x = x_offset + int(R * np.cos(np.pi * 2 * i / n_states))
-        y = y_offset + int(R * np.sin(np.pi * 2 * i / n_states))
-        ax.imshow(wordcloud.to_array(), extent=(x - r, x + r, y - r, y + r), aspect='auto', zorder=-1)
-
-    # Initialize text.
-    text = ax.text(text_x_offset, lim - text_y_offset, '', fontsize=24)
-        
-    # Make the arrows.
-    zorder_mult = n_states ** 2 * 100
-    arrows = []
-    for i in range(n_states):
-        row = []
-        for j in range(n_states):
-            # Arrow coordinates.
-            x_i = x_offset + R * np.cos(np.pi * 2 * i / n_states)
-            y_i = y_offset + R * np.sin(np.pi * 2 * i / n_states)
-            x_j = x_offset + R * np.cos(np.pi * 2 * j / n_states)
-            y_j = y_offset + R * np.sin(np.pi * 2 * j / n_states)
-            
-            dx = x_j - x_i
-            dy = y_j - y_i
-            d = np.sqrt(dx**2 + dy**2)
-
-            if i != j:
-                arrow = ax.arrow(x_i + (r/d + arrow_p1) * dx + arrow_p2 * dy,
-                                 y_i + (r/d + arrow_p1) * dy + arrow_p2 * dx,
-                                 (1 - 2 * r/d - arrow_p3) * dx,
-                                 (1 - 2 * r/d - arrow_p3) * dy,
-                                 color=(1 - hmm.A[i][j], ) * 3,
-                                 head_width=arrow_size, head_length=arrow_size,
-                                 zorder=int(hmm.A[i][j] * zorder_mult))
-            else:
-                arrow = ax.arrow(x_i, y_i, 0, 0,
-                                 color=(1 - hmm.A[i][j], ) * 3,
-                                 head_width=arrow_size, head_length=arrow_size,
-                                 zorder=int(hmm.A[i][j] * zorder_mult))
-
-            row.append(arrow)
-        arrows.append(row)
-
-    emission, states = hmm.generate_emission(M)
-    emission = [item for sublist in emission for item in sublist]
-
-    def animate(i):
-        if i >= delay:
-            i -= delay
-
-            if i == 0:
-                arrows[states[0]][states[0]].set_color('red')
-            elif i == 1:
-                arrows[states[0]][states[0]].set_color((1 - hmm.A[states[0]][states[0]], ) * 3)
-                arrows[states[i - 1]][states[i]].set_color('red')
-            else:
-                arrows[states[i - 2]][states[i - 1]].set_color((1 - hmm.A[states[i - 2]][states[i - 1]], ) * 3)
-                arrows[states[i - 1]][states[i]].set_color('red')
-
-            # Set text.
-            text.set_text(' '.join([obs_map_r[e] for e in emission][:i+1]).capitalize())
-
-            return arrows + [text]
-
-    # Animate!
-    print('\nAnimating...')
-    anim = FuncAnimation(fig, animate, frames=M+delay, interval=1000)
-
-    return anim
-
-    # honestly this function is so jank but who even fuckin cares
-    # i don't even remember how or why i wrote this mess
-    # no one's gonna read this
-    # hey if you see this tho hmu on fb let's be friends

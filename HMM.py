@@ -384,6 +384,11 @@ class HiddenMarkovModel:
 
 
     def rhyming_emission(self, obs_map, obs_map_r, syllable_map, n_syllables, n_lines, rhymes):
+        ''' This function emits a sonnet of n_lines, each lines has number of syllables equal to
+            n_syllables. The argument 'rhymes' is a list of end words for each of the lines.
+            We generate each line backwards from each end rhyme.
+        '''
+        
         emission_list = []
         possible_states = [j for j in range(self.L)]
         all_obs = [i for i in range(self.D)]
@@ -444,7 +449,10 @@ class HiddenMarkovModel:
         is chosen uniformly at random. 
 
         Arguments:
-            M:          Length of the emission to generate.
+            obs_map_r:  The reverse of obs_map, maps words to hashes
+            syllable_map: Dictionary of [key=word, value = # of syllables]
+            n_syllables: number of syllables per line
+            n_lines: number of lines to generate
 
         Returns:
             emission:   The randomly generated emission as a list.
@@ -454,12 +462,10 @@ class HiddenMarkovModel:
 
         emission_list = []
         states = []
-
+        state = random.choice(range(self.L))
         for line in range(n_lines):
             emission = []
-            state = random.choice(range(self.L))
             syllable_counter = 0
-
             while syllable_counter < n_syllables:
                 # Append state.
                 states.append(state)

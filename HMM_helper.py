@@ -140,6 +140,104 @@ def parse_backwards_observations(text):
 
     return obs, obs_map
     
+def add_rhyme_pair(word_to_set, sets, p1, p2):
+    i = -1
+    
+    # Remove punctuation
+    p1 = re.sub("\s\.$", "\s", p1)
+    p2 = re.sub("\s\.$", "\s", p2)
+    
+    # If either word found in set, get index of set
+    if (p1 in word_to_set):
+        i = word_to_set[p1]
+    elif (p2 in word_to_set):
+        i = word_to_set[p2]
+    # Otherwise create new empty set in sets and get its new index
+    else:
+        i = len(sets)
+        sets.append([])
+    
+    # If word1 not in dictionary, add it to dictionary and corresponding set
+    if (p1 not in word_to_set):
+        word_to_set[p1] = i
+        sets[i].append(p1)
+    # If word2 not in dictionary, add it to dictionary and corresponding set
+    if (p2 not in word_to_set):
+        word_to_set[p2] = i
+        sets[i].append(p2)
+
+    return word_to_set, sets
+
+def generate_rhyme_seq(sets):
+    seq = []
+    seq_count = 0
+    indices = range(len(sets))
+    
+    # Generate 3 stanzas (abab, cdcd, or efef) of rhyming words
+    for _ in range(3):
+        # Get indices for sets a and b
+        rhyme_set1 = sets[np.random.choice(indices)]
+        rhyme_set2 = sets[np.random.choice(indices)]
+        
+        # Add a, b, a, b
+        # Pick a1 and b1, and keep picking rhyming set until they're different words
+        a1 = np.random.choice(rhyme_set1)
+        b1 = np.random.choice(rhyme_set2)
+        a2 = a1
+        b2 = b1
+        while (a1 == a2):
+            a2 = np.random.choice(rhyme_set1)
+        while (b1 == b2):
+            b2 = np.random.choice(rhyme_set2)
+        seq.extend((a1, b1, a2, b2))
+    
+    # Generate gg rhyming words
+    rhyme_set = sets[np.random.choice(indices)]
+    g1 = np.random.choice(rhyme_set)
+    g2 = g1
+    while (g1 == g2):
+        g2 = np.random.choice(rhyme_set)
+    seq.extend((g1, g2))
+    
+    # Return 14 word sequence
+    return seq
+
+def make_rhyme(text):
+    # word_to_set is a dict that takes word, returns index of set it appears in
+    word_to_set = {}
+    # sets holds sets (list of unique items) of words that rhyme with one another
+    sets = []
+    
+    # Split line by poems
+    poems = re.compile(r"\n{2,}").split(text)
+    
+    # For poem, split lines and save rhymes
+    for poem in poems:
+        lines = poem.split('\n')
+
+        # Convert lines to lists of words
+        lines = [line.split() for line in lines]
+        # Strip punctuation and capitalization
+        lines = [[word.strip(",.:;?!()").lower() for word in line] for line in lines]
+
+        # Save rhymes abab cdcd efef from this poem
+        # Note first line (i=0) is the number of the sonnet so we skip it
+        for i in range(1, 13, 4):
+            # Get and add paired rhyme (e.g. a1, a2; and a2, a1)
+            a1 = lines[i][-1]
+            a2 = lines[i+2][-1]
+            b1 = lines[i+1][-1]
+            b2 = lines[i+3][-1]
+            word_to_set, sets = add_rhyme_pair(word_to_set, sets, a1, a2)
+            word_to_set, sets = add_rhyme_pair(word_to_set, sets, b1, b2)
+
+        # Save rhymes gg
+        p1 = lines[13][-1]
+        p2 = lines[14][-1]
+        word_to_set, sets = add_rhyme_pair(word_to_set, sets, p1, p2)
+    
+    return sets
+
 def parse_observations(text):
     # Convert text to dataset.
     lines = [line.split() for line in text.split('\n\n') if line.split()]

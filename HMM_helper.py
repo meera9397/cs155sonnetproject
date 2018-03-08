@@ -185,16 +185,26 @@ def generate_rhyme_seq(sets):
         rhyme_set2 = sets[np.random.choice(indices)]
         
         # Add a, b, a, b
-        seq.append(np.random.choice(rhyme_set1))
-        seq.append(np.random.choice(rhyme_set2))
-        seq.append(np.random.choice(rhyme_set1))
-        seq.append(np.random.choice(rhyme_set2))
+        # Pick a1 and b1, and keep picking rhyming set until they're different words
+        a1 = np.random.choice(rhyme_set1)
+        b1 = np.random.choice(rhyme_set2)
+        a2 = a1
+        b2 = b1
+        while (a1 == a2):
+            a2 = np.random.choice(rhyme_set1)
+        while (b1 == b2):
+            b2 = np.random.choice(rhyme_set2)
+        seq.extend((a1, b1, a2, b2))
     
     # Generate gg rhyming words
     rhyme_set = sets[np.random.choice(indices)]
-    seq.append(np.random.choice(rhyme_set))
-    seq.append(np.random.choice(rhyme_set))
+    g1 = np.random.choice(rhyme_set)
+    g2 = g1
+    while (g1 == g2):
+        g2 = np.random.choice(rhyme_set)
+    seq.extend((g1, g2))
     
+    # Return 14 word sequence
     return seq
 
 def make_rhyme(text):
@@ -203,22 +213,33 @@ def make_rhyme(text):
     # sets holds sets (list of unique items) of words that rhyme with one another
     sets = []
     
-    # TODO: Split poem by stanzas, remove numbers
+    # Split line by poems
+    poems = re.compile(r"\n{2,}").split(text)
     
-    # Save rhymes abab cdcd efef from this poem
-    for i in range(1, 13, 4):
-        # Get and add paired rhyme (e.g. a1, a2; and a2, a1)
-        a1 = lines[i][-1]
-        a2 = lines[i+2][-1]
-        b1 = lines[i+1][-1]
-        b2 = lines[i+3][-1]
-        word_to_set, sets = add_rhyme_pair(word_to_set, sets, a1, a2)
-        word_to_set, sets = add_rhyme_pair(word_to_set, sets, b1, b2)
+    # For poem, split lines and save rhymes
+    for poem in poems:
+        lines = poem.split('\n')
 
-    # Save rhymes gg
-    p1 = lines[13][-1]
-    p2 = lines[14][-1]
-    word_to_set, sets = add_rhyme_pair(word_to_set, sets, p1, p2)
+        # Convert lines to lists of words
+        lines = [line.split() for line in lines]
+        # Strip punctuation and capitalization
+        lines = [[word.strip(",.:;?!").lower() for word in line] for line in lines]
+
+        # Save rhymes abab cdcd efef from this poem
+        # Note first line (i=0) is the number of the sonnet so we skip it
+        for i in range(1, 13, 4):
+            # Get and add paired rhyme (e.g. a1, a2; and a2, a1)
+            a1 = lines[i][-1]
+            a2 = lines[i+2][-1]
+            b1 = lines[i+1][-1]
+            b2 = lines[i+3][-1]
+            word_to_set, sets = add_rhyme_pair(word_to_set, sets, a1, a2)
+            word_to_set, sets = add_rhyme_pair(word_to_set, sets, b1, b2)
+
+        # Save rhymes gg
+        p1 = lines[13][-1]
+        p2 = lines[14][-1]
+        word_to_set, sets = add_rhyme_pair(word_to_set, sets, p1, p2)
     
     rhyme_seq = generate_rhyme_seq(sets)
     
